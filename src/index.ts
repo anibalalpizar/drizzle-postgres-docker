@@ -1,6 +1,6 @@
 import "dotenv/config"
 import { drizzle } from "drizzle-orm/node-postgres"
-import { usersTable, type User } from "./db/schema"
+import { postsTable, usersTable, type Post, type User } from "./db/schema"
 import { and, eq } from "drizzle-orm"
 import * as schema from "./db/schema"
 
@@ -19,7 +19,14 @@ async function main() {
     email: "john@vercel.com",
   }
 
+  const newUser2: User = {
+    name: "Jane Doe",
+    age: 25,
+    email: "jane@vercel.com",
+  }
+
   await db.insert(usersTable).values(newuser)
+  await db.insert(usersTable).values(newUser2)
 
   const users = await db.select().from(usersTable)
 
@@ -53,6 +60,26 @@ async function main() {
   await db.delete(usersTable).where(eq(usersTable.email, "john@vercel.com"))
 
   console.log("User deleted")
+
+  const allUsers = await db.query.usersTable.findMany()
+
+  if (!allUsers.length) return
+
+  await db.insert(postsTable).values({
+    title: "Hello World",
+    content: "This is my first post",
+    userId: allUsers[0].id,
+  })
+
+  const finalUser = await db.query.usersTable.findFirst({
+    where: (users, { eq }) => eq(users.email, allUsers[0].email),
+    with: {
+      post: true,
+    },
+  })
+
+  console.log("User with post")
+  console.log(finalUser)
 }
 
 main().catch(console.error)
